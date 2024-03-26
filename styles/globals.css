@@ -1,0 +1,38 @@
+/* add tailwind styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+html,
+body,
+#root, /* for create-react-app */
+#__next /* for Next.js */ {
+  height: 100%;
+  overflow: auto;
+}
+
+.wrapper {
+  min-height: 100%;
+  border: solid;
+}
+
+body {
+  @apply bg-gray-900 text-white;
+}
