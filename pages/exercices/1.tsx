@@ -41,6 +41,14 @@ const TweetsSchema = z.object({
 // Tu pourrais utiliser zod transform pour modifier directement dans le schéma la date
 // 💡 const TweetsSchema = z.object({...
 
+const getTweets = async (signal: AbortSignal) => {
+  const res = await fetch('/api/tweets', { signal });
+  const json = await res.json();
+  if (TweetsSchema.safeParse(json).success === false) {
+    throw new Error('❌ Could not fetch tweets');
+  }
+  return TweetsSchema.parse(json);
+};
 export default function FetchAllTweets() {
   const [tweets, setTweets] = useState<TlTweets | null>(null);
   // const [tweets, setTweets] = useState<TlTweet | null>(null);
@@ -50,10 +58,12 @@ export default function FetchAllTweets() {
     const abortController = new AbortController();
 
     // 🦁 Passer le signal à la requête fetch
-    fetch('/api/tweets', { signal: abortController.signal }) // ℹ️ tu peux remplacer l'url par `/api/tweets?error=erreur` pour voir le problème
-      // fetch('tweets?error=erreur')
-      .then((res) => res.json())
-      .then((json) => TweetsSchema.parse(json))
+    // fetch('/api/tweets', { signal: abortController.signal }) // ℹ️ tu peux remplacer l'url par `/api/tweets?error=erreur` pour voir le problème
+    //   // fetch('tweets?error=erreur')
+    //   .then((res) => res.json())
+    //   .then((json) => TweetsSchema.parse(json))
+
+    getTweets(abortController.signal)
       .then((data) => {
         // 🦁 Utiliser le schéma TweetsSchema pour valider la réponse de l'API
         // console.log(data.tweets);
