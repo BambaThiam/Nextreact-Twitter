@@ -9,6 +9,8 @@ import { LikeButton } from '../../src/components/tweets/LikeButton';
 import { RepliesButton } from '../../src/components/tweets/RepliesButton';
 import { Tweet } from '../../src/components/tweets/Tweet';
 import TwitterLayout from '../../src/components/TwitterLayout';
+import { useQuery } from '@tanstack/react-query';
+import { Error } from '~/components/Error';
 
 const notifyFailed = () => toast.error("Couldn't fetch tweet...");
 
@@ -17,30 +19,44 @@ const getTweets = async (signal?: AbortSignal) =>
 
 export default function FetchAllTweets() {
   // 💣 Tu peux supprimer ce state
-  const [tweets, setTweets] = useState<TlTweets | null>(null);
+  // const [tweets, setTweets] = useState<TlTweets | null>(null);
 
   // 🦁 Remplace tout ceci en utilisant `useQuery` de `react-query`
-  useEffect(() => {
-    const abortController = new AbortController();
+  // useEffect(() => {
+  //   const abortController = new AbortController();
 
-    getTweets(abortController.signal)
-      .then((data) => {
-        setTweets(data.tweets);
-      })
-      .catch((err) => {
-        if (err.name === 'AbortError') return;
+  //   getTweets(abortController.signal)
+  //     .then((data) => {
+  //       setTweets(data.tweets);
+  //     })
+  //     .catch((err) => {
+  //       if (err.name === 'AbortError') return;
 
-        notifyFailed();
-        setTweets([]);
-      });
+  //       notifyFailed();
+  //       setTweets([]);
+  //     });
 
-    return () => abortController.abort();
-  }, []);
+  //   return () => abortController.abort();
+  // }, []);
+
+  const { data, isError, isLoading, refetch } = useQuery({
+    queryKey: ['tweets'],
+    queryFn: ({ signal }) => getTweets(signal),
+    onError: () => notifyFailed(),
+  });
 
   // 🦁 Remplace la vérification de `tweets` par un `isLoading` de `useQuery`
-  if (!tweets) return <Loader />;
+  if (isLoading) return <Loader />;
 
   // 🦁 Affiche une erreur si `isError` est `true`
+  if (isError)
+    return <Error error="Couldn't fetch tweet..." reset={() => refetch()} />;
+
+  // console.log(data);
+
+  const tweets = data.tweets;
+
+  // console.log(tweets);
 
   return (
     <TwitterLayout>
