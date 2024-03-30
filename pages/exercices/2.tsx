@@ -9,14 +9,19 @@ import { LikeButton } from '../../src/components/tweets/LikeButton';
 import { RepliesButton } from '../../src/components/tweets/RepliesButton';
 import { Tweet } from '../../src/components/tweets/Tweet';
 import TwitterLayout from '../../src/components/TwitterLayout';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Error } from '~/components/Error';
 import AddTweet_Bis from '~/components/tweets/AddTweet_Bis';
 
 const notifyFailed = () => toast.error("Couldn't fetch tweet...");
 
-const getTweets = async (signal?: AbortSignal) =>
-  client(`/api/tweets`, { signal, zodSchema: TweetsScheme });
+const getTweets = async (signal?: AbortSignal, page = 0) =>
+  client(`/api/tweets?page=${page}`, { signal, zodSchema: TweetsScheme });
 
 export default function FetchAllTweets() {
   // 💣 Tu peux supprimer ce state
@@ -40,10 +45,21 @@ export default function FetchAllTweets() {
   //   return () => abortController.abort();
   // }, []);
 
-  const { data, isError, isLoading, refetch } = useQuery({
+  // const { data, isError, isLoading, refetch } = useQuery({
+  const {
+    data,
+    isError,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
     queryKey: ['tweets'],
-    queryFn: ({ signal }) => getTweets(signal),
+    queryFn: ({ signal, pageParam = 0 }) => getTweets(signal, pageParam),
     onError: () => notifyFailed(),
+    // getPreviousPageParam: (lastPage) => lastPage.previousPage ?? undefined,
+    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
   });
 
   // 🦁 Remplace la vérification de `tweets` par un `isLoading` de `useQuery`
@@ -55,9 +71,11 @@ export default function FetchAllTweets() {
 
   // console.log(data);
 
-  const tweets = data.tweets;
+  const tweets = data.pages?.flatMap((page) => page.tweets);
 
   // console.log(tweets);
+
+  const nextPageStatus = hasNextPage ? 'hasNextPage' : 'noNextPage';
 
   return (
     <TwitterLayout>
@@ -69,6 +87,9 @@ export default function FetchAllTweets() {
           <LikeButton count={tweet._count.likes} liked={tweet.liked} />
         </Tweet>
       ))}
+      <button onClick={() => fetchNextPage()} className="block py-4">
+        {isFetchingNextPage ? 'Loading more...' : nextPageStatus}
+      </button>
     </TwitterLayout>
   );
 }
