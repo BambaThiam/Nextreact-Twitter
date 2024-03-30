@@ -9,8 +9,9 @@ import { LikeButton } from '../../src/components/tweets/LikeButton';
 import { RepliesButton } from '../../src/components/tweets/RepliesButton';
 import { Tweet } from '../../src/components/tweets/Tweet';
 import TwitterLayout from '../../src/components/TwitterLayout';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Error } from '~/components/Error';
+import AddTweet_Bis from '~/components/tweets/AddTweet_Bis';
 
 const notifyFailed = () => toast.error("Couldn't fetch tweet...");
 
@@ -60,7 +61,9 @@ export default function FetchAllTweets() {
 
   return (
     <TwitterLayout>
-      <AddTweetForm />
+      {/* <AddTweetForm /> */}
+      <AddTweet />
+      {/* <AddTweet_Bis /> */}
       {tweets.map((tweet) => (
         <Tweet key={tweet.id} tweet={tweet}>
           <RepliesButton count={tweet._count.replies} />
@@ -70,3 +73,24 @@ export default function FetchAllTweets() {
     </TwitterLayout>
   );
 }
+
+const AddTweet = () => {
+  const queryClient = useQueryClient();
+  const mutation = useMutation(
+    (content: string) =>
+      client('/api/tweets', { method: 'POST', data: { content } }),
+    {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({
+          queryKey: ['tweets'],
+        });
+      },
+    }
+  );
+
+  const handleSubmit = (content: string) => {
+    mutation.mutate(content);
+  };
+
+  return <AddTweetForm disabled={mutation.isLoading} onSubmit={handleSubmit} />;
+};
