@@ -61,7 +61,6 @@ export default function FetchAllTweets() {
 
   return (
     <TwitterLayout>
-      {/* <AddTweetForm /> */}
       <AddTweet />
       {/* <AddTweet_Bis /> */}
       {tweets.map((tweet) => (
