@@ -23,6 +23,21 @@ const notifyFailed = () => toast.error("Couldn't fetch tweet...");
 const getTweets = async (signal?: AbortSignal, page = 0) =>
   client(`/api/tweets?page=${page}`, { signal, zodSchema: TweetsScheme });
 
+const tweetKeys = {
+  all: ['tweets'] as const,
+  // getById: (id: string) => [...tweetKeys.all, id] as const,
+  // infinite: (pageParam = 0) => [...tweetKeys.all, pageParam] as const,
+  // page: (pageParam = 0) => [...tweetKeys.infinite(pageParam)] as const,
+};
+const useInfiniteTweets = () =>
+  useInfiniteQuery({
+    queryKey: tweetKeys.all,
+    queryFn: ({ signal, pageParam = 0 }) => getTweets(signal, pageParam),
+    onError: () => notifyFailed(),
+    // getPreviousPageParam: (lastPage) => lastPage.previousPage ?? undefined,
+    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
+  });
+
 export default function FetchAllTweets() {
   // 💣 Tu peux supprimer ce state
   // const [tweets, setTweets] = useState<TlTweets | null>(null);
@@ -54,13 +69,7 @@ export default function FetchAllTweets() {
     hasNextPage,
     fetchNextPage,
     refetch,
-  } = useInfiniteQuery({
-    queryKey: ['tweets'],
-    queryFn: ({ signal, pageParam = 0 }) => getTweets(signal, pageParam),
-    onError: () => notifyFailed(),
-    // getPreviousPageParam: (lastPage) => lastPage.previousPage ?? undefined,
-    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
-  });
+  } = useInfiniteTweets();
 
   // 🦁 Remplace la vérification de `tweets` par un `isLoading` de `useQuery`
   if (isLoading) return <Loader />;
