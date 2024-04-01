@@ -8,6 +8,10 @@ import { LikeButton } from '../../src/components/tweets/LikeButton';
 import { RepliesButton } from '../../src/components/tweets/RepliesButton';
 import { Tweet } from '../../src/components/tweets/Tweet';
 import TwitterLayout from '../../src/components/TwitterLayout';
+import { client } from '~/lib/client/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useUser } from '~/hooks/UserProvider';
 
 export default function OptimisticUpdate() {
   const {
@@ -59,6 +63,10 @@ const likeTweet = async (tweetId: string, liked: boolean) => {
   // url : `/api/tweets/${tweetId}/like`
   // la method sera DELETE si liked est true, POST sinon
   // data : { userId }
+  client(`/api/tweets/${tweetId}/like`, {
+    method: liked ? 'DELETE' : 'POST',
+    data: { userId: 'todo' },
+  });
   return 'todo';
 };
 
@@ -66,6 +74,12 @@ type LikeUpdateProps = {
   tweetId: string;
   count: number;
   liked: boolean;
+};
+
+const tweetKeys = {
+  all: ['tweets'] as const,
+  list: (limit: number) => [...tweetKeys.all, { tweets: { limit } }] as const,
+  byId: (id: string) => [...tweetKeys.all, { tweet: { id } }] as const,
 };
 
 const Like = ({ count, liked, tweetId }: LikeUpdateProps) => {
@@ -79,11 +93,30 @@ const Like = ({ count, liked, tweetId }: LikeUpdateProps) => {
   // * si c'est un échec (`.catch`) : afficher un message d'erreur
   // * finalement (`.finally`) on va définir le state `isLoading` à false et le mettre à true pendant
 
+  const queryClient = useQueryClient();
+  const { user } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
+  const onClick = async () => {
+    setIsLoading(true);
+    await likeTweet(tweetId, liked)
+      .then(() => {
+        void queryClient.invalidateQueries(tweetKeys.all);
+      })
+      .catch(() => {
+        notifyFailed();
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   return (
     <LikeButton
       count={count}
+      disabled={isLoading || !user}
       onClick={() => {
         // 🦁 Appelle la fonction onClick
+        onClick();
       }}
       liked={liked}
     />
