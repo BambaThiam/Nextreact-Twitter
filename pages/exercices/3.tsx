@@ -121,7 +121,7 @@ const Like = ({ count, liked, tweetId }: LikeUpdateProps) => {
   return (
     <LikeButton
       count={count}
-      disabled={(!user, mutation.isLoading)}
+      disabled={!user || mutation.isLoading}
       onClick={() => {
         // 🦁 Appelle la fonction onClick
         mutation.mutate();
