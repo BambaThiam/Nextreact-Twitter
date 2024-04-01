@@ -12,6 +12,7 @@ import { client } from '~/lib/client/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useUser } from '~/hooks/UserProvider';
+import { TlTweetsPage } from '~/lib/scheme/tweets';
 
 export default function OptimisticUpdate() {
   const {
@@ -95,25 +96,60 @@ const Like = ({ count, liked, tweetId }: LikeUpdateProps) => {
 
   const queryClient = useQueryClient();
   const { user } = useUser();
-  // const [isLoading, setIsLoading] = useState(false);
-  // const onClick = async () => {
-  //   const { isLoading } = useMutation(() => likeTweet(tweetId, liked));
-  //   // setIsLoading(true);
-  //   {
-  //     onSuccess: () => {
-  //       void queryClient.invalidateQueries(tweetKeys.all);
-  //     };
-  //     onError: () => {
-  //       notifyFailed();
-  //     };
-  //   }
-  // };
 
-  const mutation = useMutation(() => likeTweet(tweetId, liked), {
-    onSuccess: () => {
-      void queryClient.invalidateQueries(tweetKeys.all);
+  const mutation = useMutation({
+    mutationFn: () => {
+      return likeTweet(tweetId, liked);
     },
-    onError: () => {
+
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: tweetKeys.all,
+      });
+
+      const previousValue = queryClient.getQueriesData(tweetKeys.all);
+
+      queryClient.setQueryData(
+        tweetKeys.all,
+        (old?: { pages: TlTweetsPage[] }) => {
+          if (!old) {
+            return old;
+          }
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              tweets: page.tweets.map((tweet) => {
+                if (tweet.id !== tweetId) {
+                  return tweet;
+                }
+
+                return {
+                  ...tweet,
+                  liked: !liked,
+                  _count: {
+                    ...tweet._count,
+                    likes: tweet._count.likes + (liked ? -1 : 1),
+                  },
+                };
+              }),
+            })),
+          };
+        }
+      );
+
+      return { previousValue };
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: tweetKeys.all,
+        refetchPage: (lastPage: TlTweetsPage) => {
+          return lastPage.tweets.some((tweet) => tweet.id === tweetId);
+        },
+      });
+    },
+    onError: (err, variables, context) => {
+      queryClient.setQueriesData(tweetKeys.all, context?.previousValue);
       notifyFailed();
     },
   });
