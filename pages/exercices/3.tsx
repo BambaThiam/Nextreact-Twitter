@@ -9,7 +9,7 @@ import { RepliesButton } from '../../src/components/tweets/RepliesButton';
 import { Tweet } from '../../src/components/tweets/Tweet';
 import TwitterLayout from '../../src/components/TwitterLayout';
 import { client } from '~/lib/client/client';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useUser } from '~/hooks/UserProvider';
 
@@ -95,28 +95,36 @@ const Like = ({ count, liked, tweetId }: LikeUpdateProps) => {
 
   const queryClient = useQueryClient();
   const { user } = useUser();
-  const [isLoading, setIsLoading] = useState(false);
-  const onClick = async () => {
-    setIsLoading(true);
-    await likeTweet(tweetId, liked)
-      .then(() => {
-        void queryClient.invalidateQueries(tweetKeys.all);
-      })
-      .catch(() => {
-        notifyFailed();
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  };
+  // const [isLoading, setIsLoading] = useState(false);
+  // const onClick = async () => {
+  //   const { isLoading } = useMutation(() => likeTweet(tweetId, liked));
+  //   // setIsLoading(true);
+  //   {
+  //     onSuccess: () => {
+  //       void queryClient.invalidateQueries(tweetKeys.all);
+  //     };
+  //     onError: () => {
+  //       notifyFailed();
+  //     };
+  //   }
+  // };
+
+  const mutation = useMutation(() => likeTweet(tweetId, liked), {
+    onSuccess: () => {
+      void queryClient.invalidateQueries(tweetKeys.all);
+    },
+    onError: () => {
+      notifyFailed();
+    },
+  });
 
   return (
     <LikeButton
       count={count}
-      disabled={isLoading || !user}
+      disabled={(!user, mutation.isLoading)}
       onClick={() => {
         // 🦁 Appelle la fonction onClick
-        onClick();
+        mutation.mutate();
       }}
       liked={liked}
     />
